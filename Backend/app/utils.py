@@ -8,6 +8,7 @@ from keras.applications.resnet50 import preprocess_input
 from sklearn.cluster import DBSCAN
 from datetime import datetime, timedelta
 import logging
+from sklearn.metrics.pairwise import cosine_similarity
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -58,16 +59,16 @@ def cluster_images(file_paths, features_list):
     try:
         dates = [get_photo_date(file_path) for file_path in file_paths]
         
-        # Combine features with dates
-        data = list(zip(features_list, dates))
+        # Combine features with dates and file paths
+        data = list(zip(features_list, dates, file_paths))
         
         # Custom metric for DBSCAN
         def custom_metric(a, b):
-            feature_dist = np.linalg.norm(a[0] - b[0])
-            date_diff = abs((a[1] - b[1]).days)
-            return feature_dist if date_diff <= 7 else np.inf
+            feature_similarity = cosine_similarity([a[0]], [b[0]])[0][0]
+            date_diff = abs((a[1] - b[1]).days) if a[1] and b[1] else float('inf')
+            return 1 - feature_similarity if date_diff <= 7 else np.inf  # 7-day threshold
 
-        clustering = DBSCAN(eps=0.5, min_samples=2, metric=custom_metric)
+        clustering = DBSCAN(eps=0.2, min_samples=2, metric=custom_metric)
         clusters = clustering.fit_predict(data)
         return clusters
     except Exception as e:
@@ -75,10 +76,35 @@ def cluster_images(file_paths, features_list):
         return None
 
 def select_best_photo(cluster):
-    # This is a simple implementation. You might want to enhance this based on your specific criteria.
     try:
-        # For now, just return the first photo in the cluster
-        return cluster[0] if cluster else None
+        if len(cluster) == 1:
+            return cluster[0], []
+
+        features = [process_image(photo) for photo in cluster]
+        similarity_matrix = cosine_similarity(features)
+        
+        # Find groups of very similar photos
+        similar_groups = []
+        processed = set()
+        for i in range(len(cluster)):
+            if i not in processed:
+                group = [i]
+                for j in range(i+1, len(cluster)):
+                    if similarity_matrix[i][j] > 0.95:  # Threshold for considering photos as very similar
+                        group.append(j)
+                similar_groups.append(group)
+                processed.update(group)
+
+        # Select the best photo from each group
+        best_photos = []
+        for group in similar_groups:
+            # Here you can implement more sophisticated selection criteria
+            # For now, we'll just choose the first photo in each group
+            best_photo = cluster[group[0]]
+            alternatives = [cluster[i] for i in group[1:]]
+            best_photos.append((best_photo, alternatives))
+
+        return best_photos
     except Exception as e:
         logger.error(f"Error selecting best photo: {str(e)}")
         return None
@@ -86,31 +112,26 @@ def select_best_photo(cluster):
 def organize_photos(file_paths, clusters):
     try:
         organized_photos = []
-        for i, cluster in enumerate(set(clusters)):
+        for cluster in set(clusters):
             if cluster == -1:  # DBSCAN labels noise points as -1
-                continue
-            cluster_files = [file_paths[j] for j in range(len(file_paths)) if clusters[j] == cluster]
-            if cluster_files:
-                best_photo = select_best_photo(cluster_files)
-                date = get_photo_date(best_photo)
-                organized_photos.append((date, best_photo))
-                # Add other photos from the cluster
-                for photo in cluster_files:
-                    if photo != best_photo:
-                        organized_photos.append((date, photo))
+                # Add individual photos that weren't clustered
+                organized_photos.extend([(get_photo_date(file_paths[j]), file_paths[j], [], True) 
+                                         for j in range(len(file_paths)) if clusters[j] == -1])
+            else:
+                cluster_files = [file_paths[j] for j in range(len(file_paths)) if clusters[j] == cluster]
+                if cluster_files:
+                    best_photos = select_best_photo(cluster_files)
+                    for best_photo, alternatives in best_photos:
+                        date = get_photo_date(best_photo)
+                        organized_photos.append((date, best_photo, alternatives, True))
         
         # Sort photos by date
         organized_photos.sort(key=lambda x: x[0] if x[0] is not None else datetime.min)
         
-        return [photo for _, photo in organized_photos]
+        return organized_photos
     except Exception as e:
         logger.error(f"Error organizing photos: {str(e)}")
         return []
-
-def generate_album(organized_photos):
-    # In this case, generate_album doesn't need to do anything extra
-    # as organize_photos already returns a single list of organized photos
-    return organized_photos
 
 # Usage example (you can remove this from the actual utils.py file)
 if __name__ == "__main__":
