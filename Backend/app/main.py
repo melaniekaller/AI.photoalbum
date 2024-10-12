@@ -73,12 +73,23 @@ def create_zip_from_structure(structure):
 def cleanup():
     try:
         shutil.rmtree(TEMP_UPLOAD_DIR, ignore_errors=True)
+        logger.info(f"{TEMP_UPLOAD_DIR} cleaned up.")
+    except Exception as e:
+        logger.error(f"Error cleaning {TEMP_UPLOAD_DIR}: {str(e)}")
+
+    try:
         shutil.rmtree(TEMP_ORGANIZED_DIR, ignore_errors=True)
+        logger.info(f"{TEMP_ORGANIZED_DIR} cleaned up.")
+    except Exception as e:
+        logger.error(f"Error cleaning {TEMP_ORGANIZED_DIR}: {str(e)}")
+
+    try:
         if os.path.exists("organized_photos.zip"):
             os.remove("organized_photos.zip")
-        logger.info("Cleanup completed successfully.")
+            logger.info("Zip file cleaned up.")
     except Exception as e:
-        logger.error(f"Error during cleanup: {str(e)}")
+        logger.error(f"Error removing zip file: {str(e)}")
+
 
 @app.get("/health")
 async def health_check():
