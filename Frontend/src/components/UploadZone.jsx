@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useRef } from 'react';
 
 const UploadZone = ({ onFilesSelected }) => {
+  const fileInputRef = useRef(null);
+
   const handleDrop = (event) => {
     event.preventDefault();
+    event.stopPropagation();
     const files = [...event.dataTransfer.files];
     const images = files.filter(file => file.type.startsWith('image/'));
     onFilesSelected(images);
@@ -14,22 +17,31 @@ const UploadZone = ({ onFilesSelected }) => {
     onFilesSelected(images);
   };
 
+  const handleClick = () => {
+    fileInputRef.current.click();
+  };
+
   return (
     <div
+      onClick={handleClick}
       onDrop={handleDrop}
-      onDragOver={(e) => e.preventDefault()}
-      className="border-2 border-dashed border-gray-300 bg-white p-10 text-center rounded-lg shadow-md"
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      className="border-2 border-dashed border-gray-300 bg-white p-10 text-center rounded-lg shadow-md cursor-pointer"
     >
       <p className="text-lg font-medium text-gray-600">
-        Dra och släpp dina mappar här eller <br /> klicka för att välja filer
+        Drag and drop or <br /> click to select folders and files
       </p>
       <input
+        ref={fileInputRef}
         type="file"
         multiple
-        directory="" // Viktigt för att välja mappar
+        directory=""
         webkitdirectory="true"
         onChange={handleFileChange}
-        className="opacity-0 absolute w-full h-full cursor-pointer"
+        className="hidden"
       />
     </div>
   );
