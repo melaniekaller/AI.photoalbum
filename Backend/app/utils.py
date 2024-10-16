@@ -3,8 +3,8 @@ import os
 from PIL import Image
 from PIL.ExifTags import TAGS
 import numpy as np
-from keras.applications import ResNet50
-from keras.applications.resnet50 import preprocess_input
+from tensorflow.keras.applications import ResNet50
+from tensorflow.keras.applications.resnet50 import preprocess_input
 from sklearn.cluster import DBSCAN
 from datetime import datetime, timedelta
 import logging
