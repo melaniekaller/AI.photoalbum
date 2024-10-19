@@ -5,7 +5,8 @@ import zipfile
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
-from .utils import process_image, cluster_images, organize_photos
+from app.utils import process_images, cluster_images, organize_photos
+from fastapi.middleware.cors import CORSMiddleware
 import tempfile
 
 # Set up logging
@@ -26,76 +27,63 @@ TEMP_UPLOAD_DIR = "temp_uploads"
 TEMP_ORGANIZED_DIR = "temp_organized"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5175", "http://127.0.0.1:5175"],  # Add your frontend origin here
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 async def home():
     return {"message": "Welcome to the Photo Album API!"}
 
-# Upload and organize photos
-# @app.post("/api/upload-and-organize")
-# async def upload_photos(files: list[UploadFile] = File(...)):
-#     try:
-#         # Create a temporary directory for uploads
-#         temp_dir = tempfile.mkdtemp()
-#         file_paths = []
-
-#         # Save uploaded files
-#         for file in files:
-#             if file.size > MAX_FILE_SIZE:
-#                 raise HTTPException(status_code=400, detail=f"File {file.filename} is too large. Max size is 10 MB.")
-#             file_path = os.path.join(temp_dir, file.filename)
-#             with open(file_path, "wb") as buffer:
-#                 shutil.copyfileobj(file.file, buffer)
-#             file_paths.append(file_path)
-
-#         # Process images using the AI model
-#         features = [process_image(file_path) for file_path in file_paths]
-
-#         # Cluster the images
-#         clusters = cluster_images(file_paths, features)
-
-#         # Organize the photos into an album structure
-#         organized_photos = organize_photos(file_paths, clusters)
-
-#         # Return a preview of organized photos
-#         organized_photo_preview = []
-#         for date, best_photo, alternatives, is_best in organized_photos:
-#             organized_photo_preview.append({
-#                 'date': date.isoformat() if date else None,
-#                 'best_photo': best_photo,
-#                 'alternatives': alternatives
-#             })
-
-#         # Return a preview for the frontend and temp dir for future download
-#         return {"preview": organized_photo_preview, "temp_dir": temp_dir}
-
-#     except Exception as e:
-#         logger.error(f"Error processing photos: {str(e)}")
-#         raise HTTPException(status_code=500, detail="An error occurred while processing the photos.")
 
 @app.post("/api/upload-and-organize")
 async def upload_and_organize(files: list[UploadFile] = File(...)):
     try:
-        os.makedirs(TEMP_UPLOAD_DIR, exist_ok=True)
+        # Skapa en tillfällig mapp för uppladdningar
+        temp_dir = tempfile.mkdtemp()
         file_paths = []
+
+        if not files:
+            raise HTTPException(status_code=400, detail="No files uploaded")
+        
+        # Spara uppladdade filer till den tillfälliga mappen
         for file in files:
+            logger.info(f"Received file: {file.filename}")
             if file.size > MAX_FILE_SIZE:
                 raise HTTPException(status_code=400, detail=f"File {file.filename} is too large. Max size is 10 MB.")
-
-            file_path = os.path.join(TEMP_UPLOAD_DIR, file.filename)
+            
+            file_path = os.path.join(temp_dir, file.filename)
             with open(file_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
             file_paths.append(file_path)
 
-        features = [process_image(file_path) for file_path in file_paths]
-        clusters = cluster_images(features)
-        organized_structure = organize_photos(file_paths, clusters)
+        # Anropa process_images som kan hantera både filer och mappar
+        features, file_paths = process_images(temp_dir)
 
-        zip_path = create_zip_from_structure(organized_structure)
-        return FileResponse(zip_path, filename="organized_photos.zip")
-    
+        # Klustra bilderna baserat på funktionsvektorerna
+        clusters = cluster_images(file_paths, features)
+
+        # Organisera fotona i ett albumformat
+        organized_photos = organize_photos(file_paths, clusters)
+
+        # Skapa en förhandsvisning av de organiserade bilderna
+        organized_photo_preview = []
+        for date, best_photo, alternatives, is_best in organized_photos:
+            organized_photo_preview.append({
+                'date': date.isoformat() if date else None,
+                'best_photo': best_photo,
+                'alternatives': alternatives
+            })
+
+        # Returnera förhandsvisningen och den temporära katalogen för framtida nedladdningar
+        return {"preview": organized_photo_preview, "temp_dir": temp_dir}
+
     except Exception as e:
-        # Log the full exception message for debugging
+        # Logga hela felmeddelandet för felsökning
         logger.error(f"Error occurred while processing the photos: {str(e)}")
         raise HTTPException(status_code=500, detail="An error occurred while processing the photos.")
 
