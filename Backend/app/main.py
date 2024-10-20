@@ -29,7 +29,7 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5175", "http://127.0.0.1:5175"],  # Add your frontend origin here
+    allow_origins=["http://localhost:5175/"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -42,11 +42,12 @@ async def home():
 
 @app.post("/api/upload-and-organize")
 async def upload_and_organize(files: list[UploadFile] = File(...)):
+    logger.info(f"Received {len(files)} files")
     try:
         # Skapa en tillfällig mapp för uppladdningar
         temp_dir = tempfile.mkdtemp()
         file_paths = []
-
+        
         if not files:
             raise HTTPException(status_code=400, detail="No files uploaded")
         
@@ -72,7 +73,7 @@ async def upload_and_organize(files: list[UploadFile] = File(...)):
 
         # Skapa en förhandsvisning av de organiserade bilderna
         organized_photo_preview = []
-        for date, best_photo, alternatives, is_best in organized_photos:
+        for date, best_photo, alternatives in organized_photos:
             organized_photo_preview.append({
                 'date': date.isoformat() if date else None,
                 'best_photo': best_photo,
