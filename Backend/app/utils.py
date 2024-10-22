@@ -321,6 +321,8 @@ from datetime import datetime, timedelta
 import logging
 from sklearn.metrics.pairwise import cosine_similarity
 import concurrent.futures
+import cv2
+from skimage import exposure
 
 # Set up logging
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow warnings
@@ -400,6 +402,8 @@ def process_images(file_or_folder_path):
     else:
         image_files = [file_or_folder_path]
 
+    logger.info(f"Found {len(image_files)} images for processing")
+
     # Use a ThreadPoolExecutor to process images in parallel
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         results = list(executor.map(process_single_image, image_files))
@@ -409,7 +413,10 @@ def process_images(file_or_folder_path):
         if result is not None:
             features_list.append(result)
             image_paths.append(image_path)
+        else:
+            logger.warning(f"Failed to process image: {image_path}")
 
+    logger.info(f"Processed {len(features_list)} images successfully")
     return features_list, image_paths
 
 
@@ -483,6 +490,53 @@ def cluster_images(file_paths, features_list):
         logger.error(f"Error clustering images: {str(e)}")
         return None
 
+def calculate_sharpness(image_path):
+    """Calculate image sharpness using the Laplacian method."""
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    if image is None:
+        return 0  # Return low sharpness if the image cannot be loaded
+    laplacian = cv2.Laplacian(image, cv2.CV_64F)
+    sharpness = laplacian.var()
+    return sharpness
+
+def calculate_exposure(image_path):
+    """Evaluate exposure using histogram analysis."""
+    image = cv2.imread(image_path)
+    if image is None:
+        return 0  # Return low score if the image cannot be loaded
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    brightness = hsv[..., 2].mean()  # Analyze the V channel in HSV space
+    return brightness
+
+def detect_faces(image_path):
+    """Detect faces in the image using OpenCV's pre-trained model."""
+    image = cv2.imread(image_path)
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
+    return len(faces)
+
+def select_best_photo(image_paths):
+    """Select the best photo based on sharpness, exposure, and face detection."""
+    best_photos = []
+    for photo_path in image_paths:
+        sharpness = calculate_sharpness(photo_path)
+        exposure_value = calculate_exposure(photo_path)
+        faces = detect_faces(photo_path)
+        
+        # Combine criteria into a score (weights can be adjusted as needed)
+        score = (sharpness * 0.5) + (exposure_value * 0.3) + (faces * 0.2)
+        best_photos.append((photo_path, score))
+    
+    # Sort by score and select the best photo
+    best_photos.sort(key=lambda x: x[1], reverse=True)
+    
+    # Choose the top photo, the rest can be alternatives
+    best_photo = best_photos[0][0]
+    alternatives = [photo[0] for photo in best_photos[1:]]
+    
+    return [(best_photo, alternatives, True)]
+
 def organize_photos(file_paths, clusters):
     """Organize photos into clusters with date metadata."""
     try:
@@ -494,6 +548,7 @@ def organize_photos(file_paths, clusters):
             else:
                 cluster_files = [file_paths[j] for j in range(len(file_paths)) if clusters[j] == cluster]
                 if cluster_files:
+                    logger.info(f"Organizing {len(cluster_files)} photos for cluster {cluster}")
                     cluster_files.sort(key=lambda f: get_photo_date(f) or datetime.min)
                     split_clusters = []
                     current_cluster = [cluster_files[0]]
@@ -510,9 +565,9 @@ def organize_photos(file_paths, clusters):
                         split_clusters.append(current_cluster)
                     for sub_cluster in split_clusters:
                         best_photos = select_best_photo(sub_cluster)
-                        for best_photo, alternatives in best_photos:
+                        for best_photo, alternatives, is_best in best_photos:
                             date = get_photo_date(best_photo)
-                            organized_photos.append((date, best_photo, alternatives, True))
+                            organized_photos.append((date, best_photo, alternatives, is_best))
         organized_photos.sort(key=lambda x: x[0] if x[0] is not None else datetime.min)
         return organized_photos
     except Exception as e:

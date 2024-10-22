@@ -108,7 +108,8 @@ const UploadZone = ({ onAlbumCreated }) => {
         console.log('Album created:', result);
         onAlbumCreated(result.preview, result.temp_dir);  // Pass organized photos to App.jsx
       } else {
-        console.error('Error creating album:', response.statusText);
+        const errorText = await response.text();
+        console.error('Error creating album:', response.status, errorText);
       }
     } catch (error) {
       console.error('Error uploading files:', error);

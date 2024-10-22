@@ -14,7 +14,7 @@ def make_celery(app):
 
 # Flask app setup
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:5175"}})
+CORS(app, resources={r"/*": {"origins": "http://localhost:5175"}}, supports_credentials=True)
 
 # Celery configuration
 app.config.update(

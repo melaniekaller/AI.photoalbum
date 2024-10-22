@@ -175,7 +175,13 @@ logger = logging.getLogger(__name__)
 # Constants for temp directories and file size limit
 TEMP_UPLOAD_DIR = "temp_uploads"
 TEMP_ORGANIZED_DIR = "temp_organized"
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+# MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+# Set the file size limit and stream uploads
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 10 GB limit (for example)
+
+# Create temp folder if it doesn't exist
+if not os.path.exists(TEMP_UPLOAD_DIR):
+    os.makedirs(TEMP_UPLOAD_DIR)
 
 @app.route('/process_images_route', methods=['POST'])
 def process_images_route():
@@ -222,15 +228,15 @@ def get_image_paths_from_request():
 def upload_and_organize():
     logger.info(f"Received request to /api/upload-and-organize")
 
-    # Create a temporary directory for uploaded files
-    temp_dir = tempfile.mkdtemp()
-    file_paths = []
-
     # Check if files are in the request
     if 'files' not in request.files:
         return abort(400, description="No files uploaded")
     
     files = request.files.getlist('files')
+
+    # Create a temporary directory for uploaded files
+    temp_dir = tempfile.mkdtemp()
+    file_paths = []
     
     logger.info(f"Number of files received: {len(files)}")
 
@@ -238,15 +244,29 @@ def upload_and_organize():
         filename = secure_filename(file.filename)
         file_path = os.path.join(temp_dir, filename)
 
-        # Check file size
-        if len(file.read()) > MAX_FILE_SIZE:
-            file.seek(0)  # Reset the file pointer after reading
-            abort(400, description=f"File {filename} is too large. Max size is 10 MB.")
-        
-        file.seek(0)  # Reset the file pointer after the size check
-        file.save(file_path)  # Save file
-        file_paths.append(file_path)
+        # Initialize a variable to keep track of the total file size
+        total_size = 0
+
+        # Streaming the file to disk and checking size while streaming
+        with open(file_path, 'wb') as f:
+            for chunk in file.stream:
+                total_size += len(chunk)
+                if total_size > app.config['MAX_CONTENT_LENGTH']:
+                    abort(400, description=f"File {filename} is too large. Max size is 10 GB.")
+                f.write(chunk)
+
         logger.info(f"Saved file: {file_path}")
+        file_paths.append(file_path)
+
+        # # Check file size
+        # if len(file.read()) > app.config['MAX_CONTENT_LENGTH']:
+        #     file.seek(0)  # Reset the file pointer after reading
+        #     abort(400, description=f"File {filename} is too large. Max size is 10 MB.")
+        
+        # file.seek(0)  # Reset the file pointer after the size check
+        # file.save(file_path)  # Save file
+        # file_paths.append(file_path)
+        # logger.info(f"Saved file: {file_path}")
 
     try:
         # Process images (this handles both files and directories)
@@ -260,11 +280,12 @@ def upload_and_organize():
 
         # Prepare the organized preview for the response
         organized_photo_preview = []
-        for date, best_photo, alternatives in organized_photos:
+        for date, best_photo, alternatives, is_best in organized_photos:
             organized_photo_preview.append({
                 'date': date.isoformat() if date else None,
                 'best_photo': best_photo,
-                'alternatives': alternatives
+                'alternatives': alternatives,
+                'is_best': is_best
             })
 
         # Return the organized preview and the temp directory for future download
