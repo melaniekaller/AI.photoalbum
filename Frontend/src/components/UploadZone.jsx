@@ -17,16 +17,20 @@ const UploadZone = ({ onAlbumCreated }) => {
 
   // Handle file upload or drag-and-drop
   const handleFiles = (uploadedFiles) => {
-    const newImages = uploadedFiles.map((file) => ({
+    const newFiles = uploadedFiles.filter(
+      (file) => !fileList.some((f) => f.name === file.name)
+    );
+    const newImages = newFiles.map((file) => ({
       src: URL.createObjectURL(file),
       name: file.name,
       file: file,
     }));
-
-    setImages([...images, ...newImages]);  // Add files to state
-    setFileList([...fileList, ...uploadedFiles]);  // Keep track of files for FormData
-    logFiles(uploadedFiles);
+  
+    setImages([...images, ...newImages]); 
+    setFileList([...fileList, ...newFiles]);
+    logFiles(newFiles);
   };
+  
 
   const handleDrop = async (event) => {
     event.preventDefault();

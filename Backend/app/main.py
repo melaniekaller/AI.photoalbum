@@ -299,20 +299,49 @@ def upload_and_organize():
 @app.route('/api/update-best-photo', methods=['POST'])
 def update_best_photo():
     try:
+        # Get the updated photo information from the request
         data = request.json
         updated_photos = data.get('updatedPhotos')
         temp_dir = data.get('tempDir')
 
+        # Ensure that temp_dir exists
+        if not os.path.exists(temp_dir):
+            return abort(400, description="Temporary directory not found")
+
         # Apply changes to the saved files in temp_dir
         for photo in updated_photos:
-            # Logic to update the files or best photo designation in temp_dir
-            pass
+            best_photo_path = os.path.join(temp_dir, os.path.basename(photo['best_photo']))
+            alternatives = photo['alternatives']
+            is_best = photo.get('is_best', False)
+
+            # Ensure the best photo file exists
+            if not os.path.exists(best_photo_path):
+                logger.error(f"Best photo {best_photo_path} does not exist.")
+                continue
+
+            # Create a folder to store the best photo and its alternatives, if necessary
+            cluster_dir = os.path.join(temp_dir, f"cluster_{updated_photos.index(photo)}")
+            if not os.path.exists(cluster_dir):
+                os.makedirs(cluster_dir)
+
+            # Move the best photo to the top level or mark it in the cluster directory
+            best_photo_name = f"best_{os.path.basename(best_photo_path)}"
+            best_photo_dest = os.path.join(cluster_dir, best_photo_name)
+
+            # Copy or move the best photo to the cluster directory
+            shutil.copy(best_photo_path, best_photo_dest)
+
+            # Handle alternatives
+            for alt in alternatives:
+                alt_photo_path = os.path.join(temp_dir, os.path.basename(alt))
+                if os.path.exists(alt_photo_path):
+                    shutil.copy(alt_photo_path, os.path.join(cluster_dir, os.path.basename(alt_photo_path)))
 
         return jsonify({"message": "Best photos updated successfully"}), 200
+
     except Exception as e:
         logger.error(f"Error updating best photo: {str(e)}")
         return abort(500, description="An error occurred while updating the best photo.")
-
 
 # Endpoint for downloading the organized album as a zip file
 @app.route('/api/download-album', methods=['POST'])
