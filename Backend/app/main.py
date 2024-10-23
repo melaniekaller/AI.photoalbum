@@ -296,6 +296,24 @@ def upload_and_organize():
         return abort(500, description="An error occurred while processing the photos.")
 
 
+@app.route('/api/update-best-photo', methods=['POST'])
+def update_best_photo():
+    try:
+        data = request.json
+        updated_photos = data.get('updatedPhotos')
+        temp_dir = data.get('tempDir')
+
+        # Apply changes to the saved files in temp_dir
+        for photo in updated_photos:
+            # Logic to update the files or best photo designation in temp_dir
+            pass
+
+        return jsonify({"message": "Best photos updated successfully"}), 200
+    except Exception as e:
+        logger.error(f"Error updating best photo: {str(e)}")
+        return abort(500, description="An error occurred while updating the best photo.")
+
+
 # Endpoint for downloading the organized album as a zip file
 @app.route('/api/download-album', methods=['POST'])
 def download_album():
