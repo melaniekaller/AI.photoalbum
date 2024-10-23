@@ -84,22 +84,14 @@ const UploadZone = ({ onAlbumCreated }) => {
     });
 
     try {
-      // console.log('Sending files to backend...');
       console.log('FormData contents:');
       for (let [key, value] of formData.entries()) {
         console.log(key, value);
       }
-      // const response = await fetch('http://localhost:8000/api/upload-and-organize', {
-      // const response = await fetch('http://127.0.0.1:8000/api/upload-and-organize', {
-      //   method: 'POST',
-      //   credentials: 'include',
-      //   // headers: { 'Content-Type': 'multipart/form-data' },
-      //   body: formData,
-      // });
 
       const response = await fetch('http://127.0.0.1:8000/api/upload-and-organize', {
         method: 'POST',
-        credentials: 'include',  // Include credentials if you're using sessions
+        credentials: 'include',
         body: formData,
       });
 
