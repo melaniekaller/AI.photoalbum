@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import UploadZone from './components/UploadZone';  // Handles file uploading and creation of album
 import PhotoAlbum from './components/PhotoAlbum';  // Handles showing the organized photos
 import AlbumDownloader from './components/AlbumDownloader';  // Handles downloading the organized photos
@@ -45,6 +45,17 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    if (organizedPhotos.length > 0) {
+      // Verify that images are accessible
+      organizedPhotos.forEach(photo => {
+        const img = new Image();
+        img.onerror = () => console.error(`Failed to load image: ${photo.best_photo}`);
+        img.src = `http://localhost:8000/uploads/${tempDir}/${photo.best_photo}`;
+      });
+    }
+  }, [organizedPhotos, tempDir]);
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-4">Photo Album Creator</h1>
@@ -58,7 +69,7 @@ function App() {
           <h2 className="text-2xl font-semibold mb-4">Preview Your Organized Album</h2>
 
           {/* Allow user to change the best photo in the album */}
-          <PhotoAlbum organizedPhotos={organizedPhotos} onBestPhotoChange={handleBestPhotoChange} />
+          <PhotoAlbum organizedPhotos={organizedPhotos} tempDir={tempDir} onBestPhotoChange={handleBestPhotoChange} />
 
           {/* AlbumDownloader component for downloading the final album */}
           <AlbumDownloader tempDir={tempDir} />
