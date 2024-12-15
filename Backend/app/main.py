@@ -7,7 +7,7 @@ import tempfile
 from flask import Flask, request, jsonify, send_file, abort, send_from_directory, current_app
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-from app.utils import process_images, cluster_images, organize_photos, create_placeholder_images
+from app.utils import process_images, cluster_images, organize_photos
 from app.tasks import process_image_task
 from app.celery_app import app
 
@@ -38,7 +38,7 @@ if not os.path.exists(TEMP_UPLOAD_DIR):
     os.makedirs(TEMP_UPLOAD_DIR)
 
 # Create placeholder images
-create_placeholder_images()
+# create_placeholder_images()
 
 @app.route('/', methods=['GET'])
 def index():

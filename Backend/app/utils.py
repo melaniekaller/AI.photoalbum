@@ -282,26 +282,3 @@ def organize_photos(file_paths, clusters):
     except Exception as e:
         logger.error(f"Error organizing photos: {str(e)}")
         return []
-
-def create_placeholder_images():
-    """Create placeholder images if they don't exist"""
-    static_dir = os.path.join(os.path.dirname(__file__), 'static', 'images')
-    os.makedirs(static_dir, exist_ok=True)
-    
-    # Create main placeholder
-    main_size = (400, 300)
-    thumb_size = (100, 100)
-    
-    # Create main placeholder
-    placeholder = Image.new('RGB', main_size, color='#f0f0f0')
-    d = ImageDraw.Draw(placeholder)
-    d.rectangle([0, 0, main_size[0]-1, main_size[1]-1], outline='#cccccc')
-    d.text((main_size[0]//2-50, main_size[1]//2-10), 'No Image', fill='#666666')
-    placeholder.save(os.path.join(static_dir, 'placeholder.jpg'))
-    
-    # Create thumbnail placeholder
-    thumb = Image.new('RGB', thumb_size, color='#f0f0f0')
-    d = ImageDraw.Draw(thumb)
-    d.rectangle([0, 0, thumb_size[0]-1, thumb_size[1]-1], outline='#cccccc')
-    d.text((thumb_size[0]//2-20, thumb_size[1]//2-5), 'Thumb', fill='#666666')
-    thumb.save(os.path.join(static_dir, 'placeholder-thumb.jpg'))

@@ -40,10 +40,6 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
     onBestPhotoChange(updatedAlbum);
   };
 
-  // Constants for placeholder images
-  const PLACEHOLDER_URL = 'http://localhost:8000/static/images/placeholder.jpg';
-  const PLACEHOLDER_THUMB_URL = 'http://localhost:8000/static/images/placeholder-thumb.jpg';
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {album.map((photo, index) => (
