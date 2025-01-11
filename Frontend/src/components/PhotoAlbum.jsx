@@ -52,7 +52,7 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       {album.map((photo, index) => (
         <div key={index} className="border rounded-lg p-4">
           <h3 className="text-xl font-semibold mb-2">{photo.date || 'No Date'}</h3>
@@ -74,13 +74,13 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
           </div>
 
           {/* Alternatives thumbnails with multiple selection */}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex overflow-x-auto gap-2">
             {photo.alternatives.map((alt, i) => (
               <img
                 key={i}
                 src={getImageUrl(alt)}
                 alt={`Alternative ${i + 1}`}
-                className={`w-16 h-16 object-cover rounded-lg cursor-pointer 
+                className={`w-14 h-14 object-cover rounded-lg cursor-pointer 
                   ${(photo.best_photos || []).includes(alt) 
                     ? 'border-4 border-blue-500' 
                     : 'border border-gray-300'}`}

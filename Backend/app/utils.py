@@ -147,7 +147,7 @@ def cluster_images(file_paths, features_list):
         features_list, file_paths = zip(*valid_data)
 
         logger.info(f"Running DBSCAN on {len(file_paths)} images.")
-        clustering = DBSCAN(eps=0.5, min_samples=2, metric='cosine')
+        clustering = DBSCAN(eps=0.6, min_samples=2, metric='cosine')
         initial_clusters = clustering.fit_predict(features_list)
         logger.info(f"Initial clustering found {len(set(initial_clusters)) - (1 if -1 in initial_clusters else 0)} clusters.")
 

@@ -58,21 +58,25 @@ function App() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-3xl font-bold mb-4">Photo Album Creator</h1>
+      <h1 className="text-5xl flex justify-center font-semibold mb-4">Photo Album Creator</h1>
       
       {/* UploadZone handles the file selection and album creation */}
-      <UploadZone onAlbumCreated={onAlbumCreated} />
+      <div className='flex justify-center mb-20'>
+        <UploadZone onAlbumCreated={onAlbumCreated} />
+      </div>
 
       {/* Show the organized album once it's created */}
       {isAlbumCreated && (
         <div>
-          <h2 className="text-2xl font-semibold mb-4">Preview Your Organized Album</h2>
+          <h2 className="text-3xl flex justify-center font-semibold mb-6">Preview Your Organized Album</h2>
 
           {/* Allow user to change the best photo in the album */}
           <PhotoAlbum organizedPhotos={organizedPhotos} tempDir={tempDir} onBestPhotoChange={handleBestPhotoChange} />
 
           {/* AlbumDownloader component for downloading the final album */}
-          <AlbumDownloader tempDir={tempDir} />
+          <div className='relative'>
+            <AlbumDownloader tempDir={tempDir}/>
+          </div>
         </div>
       )}
     </div>
