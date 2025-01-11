@@ -27,11 +27,12 @@ logger = logging.getLogger(__name__)
 # celery = make_celery(app)
 
 # Constants for temp directories and file size limit
+
 TEMP_UPLOAD_DIR = "temp_uploads"
 TEMP_ORGANIZED_DIR = "temp_organized"
 # MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 # Set the file size limit and stream uploads
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 10 GB limit (for example)
+# app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 10 GB limit (for example)
 
 # Create temp folder if it doesn't exist
 if not os.path.exists(TEMP_UPLOAD_DIR):

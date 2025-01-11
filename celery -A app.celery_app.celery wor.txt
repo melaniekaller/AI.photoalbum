@@ -5,3 +5,4 @@ npm run dev          -i frontend
 
 sudo service redis-server start
 melaniekaller@DESKTOP-14919L7:~$ sudo systemctl status redis-server               -i wsl
+
