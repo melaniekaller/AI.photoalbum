@@ -181,49 +181,66 @@ def upload_and_organize():
 @app.route('/api/update-best-photo', methods=['POST'])
 def update_best_photo():
     try:
-        # Get the updated photo information from the request
+        # Get data from request
         data = request.json
         updated_photos = data.get('updatedPhotos')
         temp_dir = data.get('tempDir')
 
-        # Ensure that temp_dir exists
-        if not os.path.exists(temp_dir):
+        logger.info(f"Received update request for temp_dir: {temp_dir}")
+        logger.info(f"Updated photos data: {updated_photos}")
+
+        if not temp_dir or not updated_photos:
+            logger.error("Missing required data in request")
+            return abort(400, description="Missing required data")
+
+        full_temp_dir = os.path.join(TEMP_UPLOAD_DIR, temp_dir)
+        if not os.path.exists(full_temp_dir):
+            logger.error(f"Directory not found: {full_temp_dir}")
             return abort(400, description="Temporary directory not found")
 
-        # Apply changes to the saved files in temp_dir
-        for photo in updated_photos:
-            best_photo_path = os.path.join(temp_dir, os.path.basename(photo['best_photo']))
-            alternatives = photo['alternatives']
-            is_best = photo.get('is_best', False)
+        # Process each photo in the updated data
+        for idx, photo in enumerate(updated_photos):
+            try:
+                best_photos = photo.get('best_photos', [])
+                alternatives = photo.get('alternatives', [])
+                
+                logger.info(f"Processing cluster {idx} with {len(best_photos)} best photos")
+                
+                # Create cluster directory
+                cluster_dir = os.path.join(full_temp_dir, f"cluster_{idx}")
+                os.makedirs(cluster_dir, exist_ok=True)
 
-            # Ensure the best photo file exists
-            if not os.path.exists(best_photo_path):
-                logger.error(f"Best photo {best_photo_path} does not exist.")
+                # Process best photos
+                for best_photo in best_photos:
+                    source_path = os.path.join(full_temp_dir, os.path.basename(best_photo))
+                    if os.path.exists(source_path):
+                        dest_name = f"best_{os.path.basename(best_photo)}"
+                        dest_path = os.path.join(cluster_dir, dest_name)
+                        logger.info(f"Copying best photo from {source_path} to {dest_path}")
+                        shutil.copy2(source_path, dest_path)
+                    else:
+                        logger.warning(f"Best photo not found: {source_path}")
+
+                # Process alternatives
+                for alt in alternatives:
+                    if alt not in best_photos:
+                        source_path = os.path.join(full_temp_dir, os.path.basename(alt))
+                        if os.path.exists(source_path):
+                            dest_path = os.path.join(cluster_dir, os.path.basename(alt))
+                            logger.info(f"Copying alternative from {source_path} to {dest_path}")
+                            shutil.copy2(source_path, dest_path)
+                        else:
+                            logger.warning(f"Alternative photo not found: {source_path}")
+
+            except Exception as e:
+                logger.error(f"Error processing photo {idx}: {str(e)}")
                 continue
-
-            # Create a folder to store the best photo and its alternatives, if necessary
-            cluster_dir = os.path.join(temp_dir, f"cluster_{updated_photos.index(photo)}")
-            if not os.path.exists(cluster_dir):
-                os.makedirs(cluster_dir)
-
-            # Move the best photo to the top level or mark it in the cluster directory
-            best_photo_name = f"best_{os.path.basename(best_photo_path)}"
-            best_photo_dest = os.path.join(cluster_dir, best_photo_name)
-
-            # Copy or move the best photo to the cluster directory
-            shutil.copy(best_photo_path, best_photo_dest)
-
-            # Handle alternatives
-            for alt in alternatives:
-                alt_photo_path = os.path.join(temp_dir, os.path.basename(alt))
-                if os.path.exists(alt_photo_path):
-                    shutil.copy(alt_photo_path, os.path.join(cluster_dir, os.path.basename(alt_photo_path)))
 
         return jsonify({"message": "Best photos updated successfully"}), 200
 
     except Exception as e:
-        logger.error(f"Error updating best photo: {str(e)}")
-        return abort(500, description="An error occurred while updating the best photo.")
+        logger.error(f"Error updating best photos: {str(e)}")
+        return abort(500, description=str(e))
 
 # Endpoint for downloading the organized album as a zip file
 @app.route('/api/download-album', methods=['POST'])
