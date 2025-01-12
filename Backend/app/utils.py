@@ -2,9 +2,9 @@ import os
 import tensorflow as tf
 from PIL import Image
 from PIL.ExifTags import TAGS
-import keras
-from keras.applications.resnet50 import ResNet50
-from keras.applications.resnet50 import preprocess_input
+# import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
 import numpy as np
 from sklearn.cluster import DBSCAN
 from datetime import datetime, timedelta
