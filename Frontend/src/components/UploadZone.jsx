@@ -122,7 +122,7 @@ const UploadZone = ({ onAlbumCreated }) => {
         onDragOver={(e) => e.preventDefault()}
         onDragEnter={() => setIsDragging(true)}
         onDragLeave={() => setIsDragging(false)}
-        className={`border-2 border-dashed ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'} p-6 text-center rounded-lg shadow-md cursor-pointer`}
+        className={`border-2 border-dashed ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'} p-6 text-center p-16 rounded-lg shadow-md cursor-pointer`}
       >
         <input
           ref={fileInputRef}
