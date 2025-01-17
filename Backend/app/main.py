@@ -176,86 +176,18 @@ def upload_and_organize():
                 'is_best': is_best
             })
         
+        # Save organized photos to updated_photos.json
+        updated_photos_path = os.path.join(upload_dir, 'updated_photos.json')
+        with open(updated_photos_path, 'w') as f:
+            json.dump(organized_preview, f)
+        logger.info(f"Successfully saved updated_photos.json to {updated_photos_path}")
+
         logger.info(f"Successfully organized {len(organized_preview)} photos")
         return jsonify({"preview": organized_preview, "temp_dir": unique_dir})
 
     except Exception as e:
         logger.error(f"Error processing photos: {str(e)}")
         return abort(500, description="Error processing photos")
-
-
-# @app.route('/api/update-best-photo', methods=['POST'])
-# def update_best_photo():
-#     logger.info(f"Headers: {request.headers}")
-#     logger.info(f"Content-Type: {request.content_type}")
-#     logger.info(f"Request Data: {request.get_data(as_text=True)}")
-
-#     try:
-#         # Get data from request
-#         data = request.form
-#         updated_photos = data.get('updatedPhotos')
-#         temp_dir = data.get('tempDir')
-
-#         logger.info(f"Request payload received: tempDir={temp_dir}, updatedPhotos={updated_photos}")
-
-#         if not temp_dir or not updated_photos:
-#             logger.error("Missing required data in request")
-#             return abort(400, description="Missing required data")
-
-#         full_temp_dir = os.path.join(TEMP_UPLOAD_DIR, temp_dir)
-#         if not os.path.exists(full_temp_dir):
-#             logger.error(f"Temporary directory not found: {full_temp_dir}")
-#             return abort(400, description="Temporary directory not found")
-
-#         # Process each photo in the updated data
-#         for idx, photo in enumerate(updated_photos):
-#             try:
-#                 best_photos = photo.get('best_photos', [])
-#                 alternatives = photo.get('alternatives', [])
-                
-#                 logger.info(f"Processing cluster {idx} with {len(best_photos)} best photos and {len(alternatives)} alternatives.")
-                
-#                 # Validate filenames
-#                 invalid_files = [file for file in best_photos + alternatives \
-#                                  if not os.path.exists(os.path.join(full_temp_dir, os.path.basename(file)))]
-#                 if invalid_files:
-#                     logger.warning(f"Files not found: {invalid_files}")
-
-#                 # Create cluster directory
-#                 cluster_dir = os.path.join(full_temp_dir, f"cluster_{idx}")
-#                 os.makedirs(cluster_dir, exist_ok=True)
-
-#                 # Process best photos
-#                 for best_photo in best_photos:
-#                     source_path = os.path.join(full_temp_dir, os.path.basename(best_photo))
-#                     if os.path.exists(source_path):
-#                         dest_name = f"best_{os.path.basename(best_photo)}"
-#                         dest_path = os.path.join(cluster_dir, dest_name)
-#                         shutil.copy2(source_path, dest_path)
-#                         logger.info(f"Copied best photo to {dest_path}")
-#                     else:
-#                         logger.warning(f"Best photo not found: {source_path}")
-
-#                 # Process alternatives
-#                 for alt in alternatives:
-#                     if alt not in best_photos:
-#                         source_path = os.path.join(full_temp_dir, os.path.basename(alt))
-#                         if os.path.exists(source_path):
-#                             dest_path = os.path.join(cluster_dir, os.path.basename(alt))
-#                             shutil.copy2(source_path, dest_path)
-#                             logger.info(f"Copied alternative photo to {dest_path}")
-#                         else:
-#                             logger.warning(f"Alternative photo not found: {source_path}")
-
-#             except Exception as e:
-#                 logger.error(f"Error processing cluster {idx}: {str(e)}")
-#                 continue
-
-#         return jsonify({"message": "Best photos updated successfully"}), 200
-
-#     except Exception as e:
-#         logger.error(f"General error in update_best_photo: {str(e)}")
-#         return abort(500, description=str(e))
 
 @app.route('/api/update-best-photo', methods=['POST'])
 def update_best_photo():
@@ -338,71 +270,85 @@ def update_best_photo():
                 logger.error(f"Error processing cluster {idx}: {str(e)}")
                 continue
 
+        # Save updated photos to updated_photos.json
+        updated_photos_path = os.path.join(full_temp_dir, "updated_photos.json")
+        with open(updated_photos_path, 'w') as f:
+            json.dump(updated_photos, f)
+        logger.info(f"Saved updated photos to {updated_photos_path}")
+
         return jsonify({"message": "Best photos updated successfully"}), 200
 
     except Exception as e:
         logger.error(f"General error in update_best_photo: {str(e)}")
         return abort(500, description=f"Internal Server Error: {str(e)}")
 
-# Endpoint for downloading the organized album as a zip file
-@app.route('/api/download-album', methods=['POST'])
+@app.route('/api/download-album', methods=['GET'])
 def download_album():
+    temp_dir = request.args.get('tempDir')
+    json_path = os.path.join('temp_uploads', temp_dir, 'updated_photos.json')
+    
+    if not os.path.exists(json_path):
+        app.logger.error(f'{json_path} not found')
+        return jsonify({'error': 'updated_photos.json not found'}), 400
+
     try:
-        data = request.get_json()
-        temp_dir = data.get("temp_dir")
-        
+        # Extract tempDir from query parameters
+        temp_dir = request.args.get('tempDir')
         if not temp_dir:
-            logger.error("No temp_dir provided in request")
-            return abort(400, description="No temporary directory specified")
+            logger.error("Missing tempDir parameter")
+            return abort(400, description="Missing tempDir parameter")
 
-        # Construct the full path to the temp directory
         full_temp_dir = os.path.join(TEMP_UPLOAD_DIR, temp_dir)
-        
         if not os.path.exists(full_temp_dir):
-            logger.error(f"Directory not found: {full_temp_dir}")
-            return abort(400, description="Temporary directory does not exist")
+            logger.error(f"Temporary directory not found: {full_temp_dir}")
+            return abort(400, description="Temporary directory not found")
 
-        logger.info(f"Creating zip file from directory: {full_temp_dir}")
+        # Load updated_photos.json
+        updated_photos_path = os.path.join(full_temp_dir, "updated_photos.json")
+        if not os.path.exists(updated_photos_path):
+            logger.error(f"updated_photos.json not found in {full_temp_dir}")
+            return abort(400, description="updated_photos.json not found")
 
-        # Create a zip file with selected best photos and photos without alternatives
-        memory_file = tempfile.NamedTemporaryFile(delete=False)
-        with zipfile.ZipFile(memory_file, 'w') as zf:
-            # Walk through the directory
-            for root, _, files in os.walk(full_temp_dir):
-                for file in files:
-                    if file.startswith("best_") or not any(f.startswith("best_") for f in files):
-                        file_path = os.path.join(root, file)
-                        # Add file to zip with relative path
-                        arcname = os.path.relpath(file_path, full_temp_dir)
-                        logger.info(f"Adding file to zip: {file_path} as {arcname}")
-                        zf.write(file_path, arcname)
+        with open(updated_photos_path, 'r') as f:
+            updated_photos = json.load(f)
 
-        memory_file.seek(0)
-        
-        logger.info("Zip file created successfully")
+        # Create a zip file
+        zip_filename = os.path.join(full_temp_dir, "album.zip")
+        with zipfile.ZipFile(zip_filename, 'w') as zipf:
+            for photo in updated_photos:
+                best_photos = photo.get("best_photos", [])
+                if best_photos:
+                    # Add selected best photos
+                    for best_photo in best_photos:
+                        source_path = os.path.join(full_temp_dir, os.path.basename(best_photo))
+                        if os.path.exists(source_path):
+                            zipf.write(source_path, arcname=os.path.basename(best_photo))
+                else:
+                    # Add standalone photos
+                    best_photo = photo.get("best_photo")
+                    if best_photo:
+                        source_path = os.path.join(full_temp_dir, os.path.basename(best_photo))
+                        if os.path.exists(source_path):
+                            zipf.write(source_path, arcname=os.path.basename(best_photo))
 
-        # Return the zip file
+        # Return the zip file as a response
         response = send_file(
-            memory_file.name,
-            mimetype='application/zip',
+            zip_filename,
             as_attachment=True,
+            mimetype='application/zip',
             download_name=f"photo_album_{temp_dir}.zip"
         )
 
-        # Clean up after sending
+        # Clean up the temporary directory after sending the response
         @response.call_on_close
-        def cleanup():
-            logger.info("Cleaning up temporary zip file")
-            try:
-                os.unlink(memory_file.name)
-            except Exception as e:
-                logger.error(f"Error cleaning up zip file: {e}")
+        def cleanup_temp_dir():
+            cleanup(full_temp_dir)
 
         return response
 
     except Exception as e:
-        logger.error(f"Error creating zip file: {str(e)}")
-        return abort(500, description=f"Error creating zip file: {str(e)}")
+        logger.error(f"Error in download_album: {str(e)}")
+        return abort(500, description=f"Internal Server Error: {str(e)}")
 
 
 # Health check endpoint
@@ -412,13 +358,19 @@ def health_check():
 
 
 # Cleanup function
-def cleanup():
+def cleanup(directory=None):
     try:
-        shutil.rmtree(TEMP_UPLOAD_DIR, ignore_errors=True)
-        shutil.rmtree(TEMP_ORGANIZED_DIR, ignore_errors=True)
-        if os.path.exists("organized_photos.zip"):
-            os.remove("organized_photos.zip")
-        logger.info("Cleanup completed successfully.")
+        if directory:
+            logger.info(f"Attempting to clean up directory: {directory}")
+            shutil.rmtree(directory, ignore_errors=True)
+            logger.info(f"Cleanup completed for directory: {directory}")
+        else:
+            logger.info("Attempting general cleanup")
+            shutil.rmtree(TEMP_UPLOAD_DIR, ignore_errors=True)
+            shutil.rmtree(TEMP_ORGANIZED_DIR, ignore_errors=True)
+            if os.path.exists("organized_photos.zip"):
+                os.remove("organized_photos.zip")
+            logger.info("General cleanup completed successfully.")
     except Exception as e:
         logger.error(f"Error during cleanup: {str(e)}")
 
