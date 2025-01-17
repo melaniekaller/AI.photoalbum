@@ -2,7 +2,6 @@ import os
 import tensorflow as tf
 from PIL import Image
 from PIL.ExifTags import TAGS
-# import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.applications.resnet50 import ResNet50, preprocess_input
 import numpy as np
@@ -15,8 +14,7 @@ import cv2
 from skimage import exposure
 from PIL import Image, ImageDraw, ImageFont
 
-# Set up logging
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -107,8 +105,8 @@ def process_single_image(file_path):
     """Process a single image and return its feature vector."""
     try:
         with Image.open(file_path) as img:
-            img.verify()  # Check file integrity
-            img = Image.open(file_path)  # Reopen for actual processing
+            img.verify()
+            img = Image.open(file_path)
             img_array = np.array(img.resize((224, 224)))
             img_array = np.expand_dims(img_array, axis=0)
             img_array = preprocess_input(img_array)

@@ -13,35 +13,17 @@ from app.tasks import process_image_task
 from app.celery_app import app
 from PIL import Image, ImageDraw, ImageFont
 
-# Flask app setup
-# app = Flask(__name__)
-# CORS(app, resources={r"/*": {"origins": "http://localhost:5175"}})
-
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# app.config.update(
-#     CELERY_BROKER_URL='redis://localhost:6379/0',
-#     CELERY_RESULT_BACKEND='redis://localhost:6379/0'
-# )
-
-# celery = make_celery(app)
-
-# Constants for temp directories and file size limit
-
+# Constants for temp directories
 TEMP_UPLOAD_DIR = r"C:\Users\melan\Documents\Nackademin\ML 2\Photoalbum\AI.photoalbum\Backend\temp_uploads"
 TEMP_ORGANIZED_DIR = "temp_organized"
-# MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
-# Set the file size limit and stream uploads
-# app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024 * 1024  # 10 GB limit (for example)
 
 # Create temp folder if it doesn't exist
 if not os.path.exists(TEMP_UPLOAD_DIR):
     os.makedirs(TEMP_UPLOAD_DIR)
-
-# Create placeholder images
-# create_placeholder_images()
 
 print(app.url_map)
 
@@ -68,7 +50,6 @@ def serve_file(filename):
             return abort(404)
 
         response = send_from_directory(full_dir_path, base_filename)
-        # response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8000'
         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:5175'
         response.headers['Cache-Control'] = 'no-cache'
         return response
@@ -78,7 +59,7 @@ def serve_file(filename):
 
 @app.route('/process_images_route', methods=['POST'])
 def process_images_route():
-    image_paths = get_image_paths_from_request()  # Parse request to get file paths
+    image_paths = get_image_paths_from_request()
     task_ids = []
 
     # Offload each image processing task to Celery
@@ -101,17 +82,17 @@ def get_image_paths_from_request():
     if not files:
         abort(400, description="No files uploaded")
 
-    temp_dir = tempfile.mkdtemp()  # Create a temporary directory to store uploaded files
+    temp_dir = tempfile.mkdtemp()
     file_paths = []
 
     for file in files:
-        filename = secure_filename(file.filename)  # Ensure safe filenames
+        filename = secure_filename(file.filename)
         if not filename:
-            continue  # Skip files without a filename
+            continue
 
         file_path = os.path.join(temp_dir, filename)
-        file.save(file_path)  # Save the uploaded file
-        file_paths.append(file_path)  # Store the path to the saved file
+        file.save(file_path)
+        file_paths.append(file_path)
 
     return file_paths
 
@@ -192,7 +173,6 @@ def upload_and_organize():
 @app.route('/api/update-best-photo', methods=['POST'])
 def update_best_photo():
     logger.info("update_best_photo endpoint triggered")
-    # Log headers and raw request data for debugging
     logger.info(f"Headers: {request.headers}")
     logger.info(f"Content-Type: {request.content_type}")
     logger.info(f"Request Data: {request.get_data(as_text=True)}")
@@ -200,7 +180,7 @@ def update_best_photo():
     try:
         # Extract form data
         form_keys = list(request.form.keys())
-        logger.info(f"Form Data Keys: {form_keys}")  # Log all form keys for debugging
+        logger.info(f"Form Data Keys: {form_keys}")
         
         temp_dir = request.form.get('tempDir')
         updated_photos = request.form.get('updatedPhotos')

@@ -27,62 +27,6 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
     });
   }, [album, tempDir]);
 
-  // // Modified to handle multiple selections
-  // const handleBestPhotoChange = (index, alternative, isAiSelected) => {
-  //   const updatedAlbum = album.map((photo, i) => {
-  //     if (i === index) {
-  //       // Create or update the best_photos array
-  //       const currentBestPhotos = photo.best_photos || [];
-  //       const updatedBestPhotos = currentBestPhotos.includes(alternative)
-  //         ? currentBestPhotos.filter(photo => photo !== alternative)
-  //         : [...currentBestPhotos, alternative];
-
-  //         console.log('Updated Best Photos:', updatedBestPhotos);
-        
-  //       return {
-  //         ...photo,
-  //         best_photos: updatedBestPhotos,
-  //         // Keep best_photo for backwards compatibility
-  //         best_photo: updatedBestPhotos[0] || alternative,
-  //         is_ai_selected: isAiSelected
-  //       };
-  //     }
-  //     return photo;
-  //   });
-
-  //   setAlbum(updatedAlbum);
-  //   // Log the data being sent to the backend for verification
-  //   // console.log('Sending updatedAlbum to backend:', updatedAlbum);
-  //   // onBestPhotoChange(updatedAlbum);
-  //   // Updated to handle JSON submission to the backend
-  //   const handleSubmit = async () => {
-  //     try {
-  //       const response = await fetch('http://localhost:8000/api/update-best-photo', {
-  //         method: 'POST',
-  //         headers: {
-  //           'Content-Type': 'application/json',
-  //         },
-  //         body: JSON.stringify({
-  //           updatedPhotos: updatedAlbum,
-  //           tempDir, // Ensure this variable is available in scope
-  //         }),
-  //       });
-
-  //       if (!response.ok) {
-  //         throw new Error(`Failed to update best photo: ${response.statusText}`);
-  //       }
-
-  //       const result = await response.json();
-  //       console.log('Update successful:', result);
-  //     } catch (error) {
-  //       console.error('Error submitting best photo update:', error);
-  //     }
-  //   };
-
-  //   handleSubmit();
-  // };
-  // };
-
   const handleBestPhotoChange = (index, alternative, isAiSelected) => {
     const updatedAlbum = album.map((photo, i) => {
       if (i === index) {
@@ -136,17 +80,17 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
   };  
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="font-playfair grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {album.map((photo, index) => (
-        <div key={index} className="border rounded-lg p-4">
-          <h3 className="text-xl font-semibold mb-2">{photo.date || 'No Date'}</h3>
+        <div key={index} className="border border-gray-400 bg-white rounded-lg p-2">
+          <h3 className="text-center text-sm mb-2">{photo.date || 'No Date'}</h3>
           
           {/* Main best photo display - show first selected best photo */}
           <div className="relative">
             <img
               src={getImageUrl(photo.best_photos?.[0] || photo.best_photo)}
               alt="Best photo"
-              className={`w-full h-64 object-cover rounded-lg mb-4 ${photo.is_ai_selected ? 'border-4 border-green-500' : ''}`}
+              className={`w-full h-64 object-contain rounded-lg mb-4 ${photo.is_ai_selected ? 'border-4 border-green-500' : ''}`}
               onError={(e) => {
                 console.error(`Error loading image:`, {
                   src: e.target.src,
@@ -164,7 +108,7 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
                 key={i}
                 src={getImageUrl(alt)}
                 alt={`Alternative ${i + 1}`}
-                className={`w-14 h-14 object-cover rounded-lg cursor-pointer 
+                className={`w-14 h-14 object-contain rounded-lg cursor-pointer 
                   ${(photo.best_photos || []).includes(alt) 
                     ? 'border-4 border-blue-500' 
                     : 'border border-gray-300'}`}

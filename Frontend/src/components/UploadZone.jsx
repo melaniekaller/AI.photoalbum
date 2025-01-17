@@ -5,9 +5,9 @@ const UploadZone = ({ onAlbumCreated }) => {
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [images, setImages] = useState([]);  // Stores the image files
-  const [selectedFolders, setSelectedFolders] = useState([]);  // Stores folder names
-  const [fileList, setFileList] = useState([]);  // Stores the file objects for FormData
+  const [images, setImages] = useState([]);
+  const [selectedFolders, setSelectedFolders] = useState([]);
+  const [fileList, setFileList] = useState([]);
 
   // Log when user uploads files
   const logFiles = (files) => {
@@ -43,7 +43,7 @@ const UploadZone = ({ onAlbumCreated }) => {
       return new Promise((resolve) => {
         if (item.isFile) {
           item.file((file) => {
-            file.fullPath = path + file.name;  // Optionally add full path
+            file.fullPath = path + file.name;
             files.push(file);
             resolve();
           });
@@ -69,7 +69,6 @@ const UploadZone = ({ onAlbumCreated }) => {
     }
 
     await Promise.all(traversePromises);
-
     setSelectedFolders(folders);
     handleFiles(files);
   };
@@ -80,7 +79,6 @@ const UploadZone = ({ onAlbumCreated }) => {
     console.log('Creating album...');
 
     const formData = new FormData();
-    // fileList.forEach((file) => formData.append('files', file));  // Append actual file objects to FormData
     fileList.forEach((file) => {
       console.log('File:', file.name, file.size, file.type);
       formData.append('files', file);
@@ -93,7 +91,6 @@ const UploadZone = ({ onAlbumCreated }) => {
       }
 
       const response = await fetch('http://127.0.0.1:8000/api/upload-and-organize', {
-      // const response = await fetch('http://161.156.172.216:8000/api/upload-and-organize', {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -102,7 +99,7 @@ const UploadZone = ({ onAlbumCreated }) => {
       if (response.ok) {
         const result = await response.json();
         console.log('Album created:', result);
-        onAlbumCreated(result.preview, result.temp_dir);  // Pass organized photos to App.jsx
+        onAlbumCreated(result.preview, result.temp_dir);
       } else {
         const errorText = await response.text();
         console.error('Error creating album:', response.status, errorText);
@@ -115,7 +112,7 @@ const UploadZone = ({ onAlbumCreated }) => {
   };
 
   return (
-    <div>
+    <div className='font-playfair'>
       <div
         onClick={() => fileInputRef.current.click()}
         onDrop={handleDrop}
@@ -126,7 +123,7 @@ const UploadZone = ({ onAlbumCreated }) => {
             setIsDragging(false);
           }
         }}
-        className={`mt-10 flex justify-center items-center bg-slate-100 border-2 border-dashed ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'} text-center p-16 rounded-lg shadow-md cursor-pointer transition-colors duration-200`}
+        className={`mt-4 w-fit flex justify-center items-center bg-slate-100 border-2 border-dashed ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'} text-center p-16 rounded-lg shadow-md cursor-pointer transition-colors duration-200`}
         style={{ minHeight: '200px', minWidth: '600px' }}
       >
         <input
@@ -179,7 +176,7 @@ const UploadZone = ({ onAlbumCreated }) => {
           <button
             onClick={handleCreateAlbum}
             disabled={isCreating}
-            className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
+            className="bg-blue-700 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded disabled:opacity-50"
           >
             {isCreating ? 'Creating Album...' : 'Create My Photo Album'}
           </button>
