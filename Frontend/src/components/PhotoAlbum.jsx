@@ -28,7 +28,7 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
   }, [album, tempDir]);
 
   // Modified to handle multiple selections
-  const handleBestPhotoChange = (index, alternative) => {
+  const handleBestPhotoChange = (index, alternative, isAiSelected) => {
     const updatedAlbum = album.map((photo, i) => {
       if (i === index) {
         // Create or update the best_photos array
@@ -36,18 +36,23 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
         const updatedBestPhotos = currentBestPhotos.includes(alternative)
           ? currentBestPhotos.filter(photo => photo !== alternative)
           : [...currentBestPhotos, alternative];
+
+          console.log('Updated Best Photos:', updatedBestPhotos);
         
         return {
           ...photo,
           best_photos: updatedBestPhotos,
           // Keep best_photo for backwards compatibility
-          best_photo: updatedBestPhotos[0] || alternative
+          best_photo: updatedBestPhotos[0] || alternative,
+          is_ai_selected: isAiSelected
         };
       }
       return photo;
     });
 
     setAlbum(updatedAlbum);
+    // Log the data being sent to the backend for verification
+    console.log('Sending updatedAlbum to backend:', updatedAlbum);
     onBestPhotoChange(updatedAlbum);
   };
 
@@ -62,7 +67,7 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
             <img
               src={getImageUrl(photo.best_photos?.[0] || photo.best_photo)}
               alt="Best photo"
-              className="w-full h-64 object-cover rounded-lg mb-4"
+              className={`w-full h-64 object-cover rounded-lg mb-4 ${photo.is_ai_selected ? 'border-4 border-green-500' : ''}`}
               onError={(e) => {
                 console.error(`Error loading image:`, {
                   src: e.target.src,
@@ -84,7 +89,7 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
                   ${(photo.best_photos || []).includes(alt) 
                     ? 'border-4 border-blue-500' 
                     : 'border border-gray-300'}`}
-                onClick={() => handleBestPhotoChange(index, alt)}
+                onClick={() => handleBestPhotoChange(index, alt, false)}
                 onError={(e) => {
                   console.error(`Error loading thumbnail:`, {
                     src: e.target.src,

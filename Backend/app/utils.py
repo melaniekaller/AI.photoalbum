@@ -53,66 +53,53 @@ def get_photo_date(file_path):
     except Exception as e:
         logger.error(f"Error getting photo date for {file_path}: {str(e)}")
         return None
-
-# def process_images(file_or_folder_path):
-#     """Process all images in a directory or a single file."""
-#     features_list = []
-#     image_paths = []
-
-#     # Check if it's a file or a folder
-#     if os.path.isfile(file_or_folder_path):
-#         features = process_single_image(file_or_folder_path)
-#         if features is not None:
-#             features_list.append(features)
-#             image_paths.append(file_or_folder_path)
-#     elif os.path.isdir(file_or_folder_path):
-#         valid_extensions = ['.jpg', '.jpeg', '.png']
-#         for file_name in os.listdir(file_or_folder_path):
-#             if os.path.splitext(file_name)[1].lower() in valid_extensions:
-#                 image_path = os.path.join(file_or_folder_path, file_name)
-#                 features = process_single_image(image_path)
-#                 if features is not None:
-#                     features_list.append(features)
-#                     image_paths.append(image_path)
-#     else:
-#         logger.error(f"Path {file_or_folder_path} is neither a file nor a directory.")
-#         return None, None
-
-#     logger.info(f"Processed {len(image_paths)} images.")
-#     return features_list, image_paths
-
+    
+def extract_frames_from_video(video_path, frame_rate=1):
+    """Extract frames from a video file at a specified frame rate."""
+    try:
+        video_capture = cv2.VideoCapture(video_path)
+        frames = []
+        count = 0
+        success, image = video_capture.read()
+        while success:
+            if count % frame_rate == 0:
+                frames.append(image)
+            success, image = video_capture.read()
+            count += 1
+        video_capture.release()
+        return frames
+    except Exception as e:
+        logger.error(f"Error extracting frames from video {video_path}: {str(e)}")
+        return []
 
 def process_images(file_or_folder_path):
     features_list = []
     image_paths = []
 
-    # Gather image paths (as you already do)
-    valid_extensions = ['.jpg', '.jpeg', '.png']
+    valid_image_extensions = ['.jpg', '.jpeg', '.png']
+    valid_video_extensions = ['.mp4', '.avi']
+
     if os.path.isdir(file_or_folder_path):
-        image_files = [os.path.join(file_or_folder_path, f) for f in os.listdir(file_or_folder_path)
-                       if os.path.splitext(f)[1].lower() in valid_extensions]
+        files = [os.path.join(file_or_folder_path, f) for f in os.listdir(file_or_folder_path)]
     else:
-        image_files = [file_or_folder_path]
+        files = [file_or_folder_path]
 
-    logger.info(f"Found {len(image_files)} images for processing")
+    for file_path in files:
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext in valid_image_extensions:
+            features = process_single_image(file_path)
+            if features is not None:
+                features_list.append(features)
+                image_paths.append(file_path)
+        elif ext in valid_video_extensions:
+            frames = extract_frames_from_video(file_path)
+            for frame in frames:
+                features = process_single_image(frame)
+                if features is not None:
+                    features_list.append(features)
+                    image_paths.append(file_path)
 
-    # Use a ThreadPoolExecutor to process images in parallel
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        results = list(executor.map(process_single_image, image_files))
-
-    # Collect results
-    for result, image_path in zip(results, image_files):
-        if result is not None:
-            features_list.append(result)
-            image_paths.append(image_path)
-        else:
-            logger.warning(f"Failed to process image: {image_path}")
-
-    # Check if no valid features were extracted after the loop
-    if not features_list:
-        logger.warning("No valid features extracted from images. Continuing without clustering.")
-
-    logger.info(f"Processed {len(features_list)} images successfully")
+    logger.info(f"Processed {len(image_paths)} files.")
     return features_list, image_paths
 
 

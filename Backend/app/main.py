@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 from app.utils import process_images, cluster_images, organize_photos
 from app.tasks import process_image_task
 from app.celery_app import app
+from PIL import Image, ImageDraw, ImageFont
 
 # Flask app setup
 # app = Flask(__name__)
@@ -186,8 +187,7 @@ def update_best_photo():
         updated_photos = data.get('updatedPhotos')
         temp_dir = data.get('tempDir')
 
-        logger.info(f"Received update request for temp_dir: {temp_dir}")
-        logger.info(f"Updated photos data: {updated_photos}")
+        logger.info(f"Request payload received: tempDir={temp_dir}, updatedPhotos={updated_photos}")
 
         if not temp_dir or not updated_photos:
             logger.error("Missing required data in request")
@@ -195,7 +195,7 @@ def update_best_photo():
 
         full_temp_dir = os.path.join(TEMP_UPLOAD_DIR, temp_dir)
         if not os.path.exists(full_temp_dir):
-            logger.error(f"Directory not found: {full_temp_dir}")
+            logger.error(f"Temporary directory not found: {full_temp_dir}")
             return abort(400, description="Temporary directory not found")
 
         # Process each photo in the updated data
@@ -204,8 +204,14 @@ def update_best_photo():
                 best_photos = photo.get('best_photos', [])
                 alternatives = photo.get('alternatives', [])
                 
-                logger.info(f"Processing cluster {idx} with {len(best_photos)} best photos")
+                logger.info(f"Processing cluster {idx} with {len(best_photos)} best photos and {len(alternatives)} alternatives.")
                 
+                # Validate filenames
+                invalid_files = [file for file in best_photos + alternatives \
+                                 if not os.path.exists(os.path.join(full_temp_dir, os.path.basename(file)))]
+                if invalid_files:
+                    logger.warning(f"Files not found: {invalid_files}")
+
                 # Create cluster directory
                 cluster_dir = os.path.join(full_temp_dir, f"cluster_{idx}")
                 os.makedirs(cluster_dir, exist_ok=True)
@@ -216,8 +222,8 @@ def update_best_photo():
                     if os.path.exists(source_path):
                         dest_name = f"best_{os.path.basename(best_photo)}"
                         dest_path = os.path.join(cluster_dir, dest_name)
-                        logger.info(f"Copying best photo from {source_path} to {dest_path}")
                         shutil.copy2(source_path, dest_path)
+                        logger.info(f"Copied best photo to {dest_path}")
                     else:
                         logger.warning(f"Best photo not found: {source_path}")
 
@@ -227,19 +233,19 @@ def update_best_photo():
                         source_path = os.path.join(full_temp_dir, os.path.basename(alt))
                         if os.path.exists(source_path):
                             dest_path = os.path.join(cluster_dir, os.path.basename(alt))
-                            logger.info(f"Copying alternative from {source_path} to {dest_path}")
                             shutil.copy2(source_path, dest_path)
+                            logger.info(f"Copied alternative photo to {dest_path}")
                         else:
                             logger.warning(f"Alternative photo not found: {source_path}")
 
             except Exception as e:
-                logger.error(f"Error processing photo {idx}: {str(e)}")
+                logger.error(f"Error processing cluster {idx}: {str(e)}")
                 continue
 
         return jsonify({"message": "Best photos updated successfully"}), 200
 
     except Exception as e:
-        logger.error(f"Error updating best photos: {str(e)}")
+        logger.error(f"General error in update_best_photo: {str(e)}")
         return abort(500, description=str(e))
 
 # Endpoint for downloading the organized album as a zip file
@@ -262,17 +268,18 @@ def download_album():
 
         logger.info(f"Creating zip file from directory: {full_temp_dir}")
 
-        # Create a zip file with organized photos
+        # Create a zip file with selected best photos and photos without alternatives
         memory_file = tempfile.NamedTemporaryFile(delete=False)
         with zipfile.ZipFile(memory_file, 'w') as zf:
             # Walk through the directory
             for root, _, files in os.walk(full_temp_dir):
                 for file in files:
-                    file_path = os.path.join(root, file)
-                    # Add file to zip with relative path
-                    arcname = os.path.relpath(file_path, full_temp_dir)
-                    logger.info(f"Adding file to zip: {file_path} as {arcname}")
-                    zf.write(file_path, arcname)
+                    if file.startswith("best_") or not any(f.startswith("best_") for f in files):
+                        file_path = os.path.join(root, file)
+                        # Add file to zip with relative path
+                        arcname = os.path.relpath(file_path, full_temp_dir)
+                        logger.info(f"Adding file to zip: {file_path} as {arcname}")
+                        zf.write(file_path, arcname)
 
         memory_file.seek(0)
         
@@ -341,6 +348,27 @@ def serve_static(filename):
     except Exception as e:
         logger.error(f"Error serving static file {filename}: {str(e)}")
         return abort(404)
+
+
+def create_placeholder_images():
+    """
+    Creates placeholder images in the static/images directory.
+    """
+    static_dir = os.path.join(current_app.root_path, 'static', 'images')
+    if not os.path.exists(static_dir):
+        os.makedirs(static_dir)
+
+    # Example placeholder images
+    placeholder_images = ['placeholder1.jpg', 'placeholder2.jpg']
+
+    for image_name in placeholder_images:
+        image_path = os.path.join(static_dir, image_name)
+        if not os.path.exists(image_path):
+            # Create a simple placeholder image (e.g., a blank image or with some text)
+            img = Image.new('RGB', (200, 200), color=(73, 109, 137))
+            d = ImageDraw.Draw(img)
+            d.text((10, 10), "Placeholder", fill=(255, 255, 0))
+            img.save(image_path)
 
 
 @app.route('/debug/files/<path:directory>')

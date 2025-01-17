@@ -58,7 +58,7 @@ function App() {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-5xl flex justify-center font-semibold mb-4">Photo Album Creator</h1>
+      <h1 className="text-5xl flex justify-center font-semibold my-4">Photo Album Creator</h1>
       
       {/* UploadZone handles the file selection and album creation */}
       <div className='flex justify-center mb-20'>

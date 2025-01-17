@@ -31,7 +31,6 @@ const UploadZone = ({ onAlbumCreated }) => {
     logFiles(newFiles);
   };
   
-
   const handleDrop = async (event) => {
     event.preventDefault();
     setIsDragging(false);
@@ -94,6 +93,7 @@ const UploadZone = ({ onAlbumCreated }) => {
       }
 
       const response = await fetch('http://127.0.0.1:8000/api/upload-and-organize', {
+      // const response = await fetch('http://161.156.172.216:8000/api/upload-and-organize', {
         method: 'POST',
         credentials: 'include',
         body: formData,
@@ -121,8 +121,13 @@ const UploadZone = ({ onAlbumCreated }) => {
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         onDragEnter={() => setIsDragging(true)}
-        onDragLeave={() => setIsDragging(false)}
-        className={`border-2 border-dashed ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'} p-6 text-center p-16 rounded-lg shadow-md cursor-pointer`}
+        onDragLeave={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) {
+            setIsDragging(false);
+          }
+        }}
+        className={`mt-10 flex justify-center items-center bg-slate-100 border-2 border-dashed ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'} text-center p-16 rounded-lg shadow-md cursor-pointer transition-colors duration-200`}
+        style={{ minHeight: '200px', minWidth: '600px' }}
       >
         <input
           ref={fileInputRef}
@@ -133,7 +138,7 @@ const UploadZone = ({ onAlbumCreated }) => {
           onChange={(e) => handleFiles([...e.target.files])}
           className="hidden"
         />
-        {selectedFolders.length === 0 ? (
+        {selectedFolders.length === 0 && images.length === 0 ? (
           <p className="text-lg font-medium text-gray-600">
             {isDragging ? 'Drop folders or files here' : 'Drag and drop or click to select folders or files'}
           </p>
@@ -145,12 +150,32 @@ const UploadZone = ({ onAlbumCreated }) => {
                 <span className="mt-2 text-sm text-gray-600 max-w-[100px] truncate">{folder}</span>
               </div>
             ))}
+            {images.slice(0, 2).map((image, index) => (
+              <div key={index} className="flex flex-col items-center">
+                <img src={image.src} alt={image.name} className="w-16 h-16 object-cover rounded" />
+                <span className="mt-2 text-sm text-gray-600 max-w-[100px] truncate">{image.name}</span>
+              </div>
+            ))}
+            {images.length > 4 && (
+              <div className="flex flex-col justify-center items-center">
+                <span className=" text-sm text-gray-600">...</span>
+              </div>
+            )}
+            {images.slice(-2).map((image, index) => (
+              <div key={index} className="flex flex-col items-center">
+                <img src={image.src} alt={image.name} className="w-16 h-16 object-cover rounded" />
+                <span className="mt-2 text-sm text-gray-600 max-w-[100px] truncate">{image.name}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
 
       {(selectedFolders.length > 0 || fileList.length > 0) && (
-        <div className="text-center mt-6">
+        <div className="text-center mt-3">
+          <p className="text-sm text-gray-600 mb-2">
+            {fileList.length} file{fileList.length !== 1 ? 's' : ''} selected
+          </p>
           <button
             onClick={handleCreateAlbum}
             disabled={isCreating}
