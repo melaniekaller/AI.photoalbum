@@ -18,6 +18,7 @@ CORS(app,
      resources={
          r"/*": {
              "origins": ["http://localhost:5175", "http://127.0.0.1:5175"],
+            #  "origins": ["http://localhost:8000", "http://127.0.0.1:8000"],
              "methods": ["GET", "POST", "OPTIONS"],
              "allow_headers": ["Content-Type", "Authorization"],
              "expose_headers": ["Content-Range", "X-Content-Range"],

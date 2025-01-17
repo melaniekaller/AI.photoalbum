@@ -106,16 +106,18 @@ def process_images(file_or_folder_path):
 def process_single_image(file_path):
     """Process a single image and return its feature vector."""
     try:
-        img = Image.open(file_path)
-        img_array = np.array(img.resize((224, 224)))
-        img_array = np.expand_dims(img_array, axis=0)
-        img_array = preprocess_input(img_array)
-        logger.info(f"Processing image: {file_path}")
-        features = model.predict(img_array)
-        logger.info(f"Image processed successfully: {file_path}")
-        return features.flatten()
-    except Exception as e:
-        logger.error(f"Error processing image {file_path}: {str(e)}")
+        with Image.open(file_path) as img:
+            img.verify()  # Check file integrity
+            img = Image.open(file_path)  # Reopen for actual processing
+            img_array = np.array(img.resize((224, 224)))
+            img_array = np.expand_dims(img_array, axis=0)
+            img_array = preprocess_input(img_array)
+            logger.info(f"Processing image: {file_path}")
+            features = model.predict(img_array)
+            logger.info(f"Image processed successfully: {file_path}")
+            return features.flatten()
+    except (IOError, SyntaxError, ValueError) as e:
+        logger.error(f"Error processing image {file_path}: {e}")
         return None
 
 def cluster_images(file_paths, features_list):

@@ -4,6 +4,7 @@ import logging
 import shutil
 import zipfile
 import tempfile
+import json
 from flask import Flask, request, jsonify, send_file, abort, send_from_directory, current_app
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 # Constants for temp directories and file size limit
 
-TEMP_UPLOAD_DIR = "temp_uploads"
+TEMP_UPLOAD_DIR = r"C:\Users\melan\Documents\Nackademin\ML 2\Photoalbum\AI.photoalbum\Backend\temp_uploads"
 TEMP_ORGANIZED_DIR = "temp_organized"
 # MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 # Set the file size limit and stream uploads
@@ -41,6 +42,9 @@ if not os.path.exists(TEMP_UPLOAD_DIR):
 
 # Create placeholder images
 # create_placeholder_images()
+
+print(app.url_map)
+
 
 @app.route('/', methods=['GET'])
 def index():
@@ -64,6 +68,7 @@ def serve_file(filename):
             return abort(404)
 
         response = send_from_directory(full_dir_path, base_filename)
+        # response.headers['Access-Control-Allow-Origin'] = 'http://localhost:8000'
         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:5175'
         response.headers['Cache-Control'] = 'no-cache'
         return response
@@ -179,19 +184,110 @@ def upload_and_organize():
         return abort(500, description="Error processing photos")
 
 
+# @app.route('/api/update-best-photo', methods=['POST'])
+# def update_best_photo():
+#     logger.info(f"Headers: {request.headers}")
+#     logger.info(f"Content-Type: {request.content_type}")
+#     logger.info(f"Request Data: {request.get_data(as_text=True)}")
+
+#     try:
+#         # Get data from request
+#         data = request.form
+#         updated_photos = data.get('updatedPhotos')
+#         temp_dir = data.get('tempDir')
+
+#         logger.info(f"Request payload received: tempDir={temp_dir}, updatedPhotos={updated_photos}")
+
+#         if not temp_dir or not updated_photos:
+#             logger.error("Missing required data in request")
+#             return abort(400, description="Missing required data")
+
+#         full_temp_dir = os.path.join(TEMP_UPLOAD_DIR, temp_dir)
+#         if not os.path.exists(full_temp_dir):
+#             logger.error(f"Temporary directory not found: {full_temp_dir}")
+#             return abort(400, description="Temporary directory not found")
+
+#         # Process each photo in the updated data
+#         for idx, photo in enumerate(updated_photos):
+#             try:
+#                 best_photos = photo.get('best_photos', [])
+#                 alternatives = photo.get('alternatives', [])
+                
+#                 logger.info(f"Processing cluster {idx} with {len(best_photos)} best photos and {len(alternatives)} alternatives.")
+                
+#                 # Validate filenames
+#                 invalid_files = [file for file in best_photos + alternatives \
+#                                  if not os.path.exists(os.path.join(full_temp_dir, os.path.basename(file)))]
+#                 if invalid_files:
+#                     logger.warning(f"Files not found: {invalid_files}")
+
+#                 # Create cluster directory
+#                 cluster_dir = os.path.join(full_temp_dir, f"cluster_{idx}")
+#                 os.makedirs(cluster_dir, exist_ok=True)
+
+#                 # Process best photos
+#                 for best_photo in best_photos:
+#                     source_path = os.path.join(full_temp_dir, os.path.basename(best_photo))
+#                     if os.path.exists(source_path):
+#                         dest_name = f"best_{os.path.basename(best_photo)}"
+#                         dest_path = os.path.join(cluster_dir, dest_name)
+#                         shutil.copy2(source_path, dest_path)
+#                         logger.info(f"Copied best photo to {dest_path}")
+#                     else:
+#                         logger.warning(f"Best photo not found: {source_path}")
+
+#                 # Process alternatives
+#                 for alt in alternatives:
+#                     if alt not in best_photos:
+#                         source_path = os.path.join(full_temp_dir, os.path.basename(alt))
+#                         if os.path.exists(source_path):
+#                             dest_path = os.path.join(cluster_dir, os.path.basename(alt))
+#                             shutil.copy2(source_path, dest_path)
+#                             logger.info(f"Copied alternative photo to {dest_path}")
+#                         else:
+#                             logger.warning(f"Alternative photo not found: {source_path}")
+
+#             except Exception as e:
+#                 logger.error(f"Error processing cluster {idx}: {str(e)}")
+#                 continue
+
+#         return jsonify({"message": "Best photos updated successfully"}), 200
+
+#     except Exception as e:
+#         logger.error(f"General error in update_best_photo: {str(e)}")
+#         return abort(500, description=str(e))
+
 @app.route('/api/update-best-photo', methods=['POST'])
 def update_best_photo():
-    try:
-        # Get data from request
-        data = request.json
-        updated_photos = data.get('updatedPhotos')
-        temp_dir = data.get('tempDir')
+    logger.info("update_best_photo endpoint triggered")
+    # Log headers and raw request data for debugging
+    logger.info(f"Headers: {request.headers}")
+    logger.info(f"Content-Type: {request.content_type}")
+    logger.info(f"Request Data: {request.get_data(as_text=True)}")
 
-        logger.info(f"Request payload received: tempDir={temp_dir}, updatedPhotos={updated_photos}")
+    try:
+        # Extract form data
+        form_keys = list(request.form.keys())
+        logger.info(f"Form Data Keys: {form_keys}")  # Log all form keys for debugging
+        
+        temp_dir = request.form.get('tempDir')
+        updated_photos = request.form.get('updatedPhotos')
+
+        # Log the extracted form data for debugging
+        logger.info(f"Extracted tempDir: {temp_dir}")
+        logger.info(f"Extracted updatedPhotos: {updated_photos}")
 
         if not temp_dir or not updated_photos:
-            logger.error("Missing required data in request")
-            return abort(400, description="Missing required data")
+            logger.error("Missing tempDir or updatedPhotos in the request.")
+            return abort(400, description="Missing tempDir or updatedPhotos")
+
+        # Parse updated_photos from JSON string
+        try:
+            updated_photos = json.loads(updated_photos)
+            logger.info(f"Parsed updatedPhotos: {updated_photos}")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse updatedPhotos as JSON: {str(e)}")
+            return abort(400, description="Invalid JSON format in updatedPhotos")
 
         full_temp_dir = os.path.join(TEMP_UPLOAD_DIR, temp_dir)
         if not os.path.exists(full_temp_dir):
@@ -203,9 +299,9 @@ def update_best_photo():
             try:
                 best_photos = photo.get('best_photos', [])
                 alternatives = photo.get('alternatives', [])
-                
+
                 logger.info(f"Processing cluster {idx} with {len(best_photos)} best photos and {len(alternatives)} alternatives.")
-                
+
                 # Validate filenames
                 invalid_files = [file for file in best_photos + alternatives \
                                  if not os.path.exists(os.path.join(full_temp_dir, os.path.basename(file)))]
@@ -246,7 +342,7 @@ def update_best_photo():
 
     except Exception as e:
         logger.error(f"General error in update_best_photo: {str(e)}")
-        return abort(500, description=str(e))
+        return abort(500, description=f"Internal Server Error: {str(e)}")
 
 # Endpoint for downloading the organized album as a zip file
 @app.route('/api/download-album', methods=['POST'])

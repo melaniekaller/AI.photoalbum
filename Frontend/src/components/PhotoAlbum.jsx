@@ -27,34 +27,113 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
     });
   }, [album, tempDir]);
 
-  // Modified to handle multiple selections
+  // // Modified to handle multiple selections
+  // const handleBestPhotoChange = (index, alternative, isAiSelected) => {
+  //   const updatedAlbum = album.map((photo, i) => {
+  //     if (i === index) {
+  //       // Create or update the best_photos array
+  //       const currentBestPhotos = photo.best_photos || [];
+  //       const updatedBestPhotos = currentBestPhotos.includes(alternative)
+  //         ? currentBestPhotos.filter(photo => photo !== alternative)
+  //         : [...currentBestPhotos, alternative];
+
+  //         console.log('Updated Best Photos:', updatedBestPhotos);
+        
+  //       return {
+  //         ...photo,
+  //         best_photos: updatedBestPhotos,
+  //         // Keep best_photo for backwards compatibility
+  //         best_photo: updatedBestPhotos[0] || alternative,
+  //         is_ai_selected: isAiSelected
+  //       };
+  //     }
+  //     return photo;
+  //   });
+
+  //   setAlbum(updatedAlbum);
+  //   // Log the data being sent to the backend for verification
+  //   // console.log('Sending updatedAlbum to backend:', updatedAlbum);
+  //   // onBestPhotoChange(updatedAlbum);
+  //   // Updated to handle JSON submission to the backend
+  //   const handleSubmit = async () => {
+  //     try {
+  //       const response = await fetch('http://localhost:8000/api/update-best-photo', {
+  //         method: 'POST',
+  //         headers: {
+  //           'Content-Type': 'application/json',
+  //         },
+  //         body: JSON.stringify({
+  //           updatedPhotos: updatedAlbum,
+  //           tempDir, // Ensure this variable is available in scope
+  //         }),
+  //       });
+
+  //       if (!response.ok) {
+  //         throw new Error(`Failed to update best photo: ${response.statusText}`);
+  //       }
+
+  //       const result = await response.json();
+  //       console.log('Update successful:', result);
+  //     } catch (error) {
+  //       console.error('Error submitting best photo update:', error);
+  //     }
+  //   };
+
+  //   handleSubmit();
+  // };
+  // };
+
   const handleBestPhotoChange = (index, alternative, isAiSelected) => {
     const updatedAlbum = album.map((photo, i) => {
       if (i === index) {
-        // Create or update the best_photos array
         const currentBestPhotos = photo.best_photos || [];
         const updatedBestPhotos = currentBestPhotos.includes(alternative)
           ? currentBestPhotos.filter(photo => photo !== alternative)
           : [...currentBestPhotos, alternative];
-
-          console.log('Updated Best Photos:', updatedBestPhotos);
-        
+  
+        console.log('Updated Best Photos:', updatedBestPhotos);
+  
         return {
           ...photo,
           best_photos: updatedBestPhotos,
-          // Keep best_photo for backwards compatibility
           best_photo: updatedBestPhotos[0] || alternative,
-          is_ai_selected: isAiSelected
+          is_ai_selected: isAiSelected,
         };
       }
       return photo;
     });
-
+  
     setAlbum(updatedAlbum);
-    // Log the data being sent to the backend for verification
-    console.log('Sending updatedAlbum to backend:', updatedAlbum);
-    onBestPhotoChange(updatedAlbum);
-  };
+  
+    const handleSubmit = async () => {
+      try {
+        const formData = new FormData();
+        formData.append('tempDir', tempDir);
+        formData.append('updatedPhotos', JSON.stringify(updatedAlbum));
+  
+        const response = await fetch('http://localhost:8000/api/update-best-photo', {
+          method: 'POST',
+          body: formData,
+        });
+  
+        if (!response.ok) {
+          throw new Error(`Failed to update best photo: ${response.statusText}`);
+        }
+  
+        const result = await response.json();
+        console.log('Update successful:', result);
+      } catch (error) {
+        console.error('Error submitting best photo update:', error);
+      }
+    };
+  
+    handleSubmit();
+  
+    // Inform the parent about the change
+    if (onBestPhotoChange) {
+      onBestPhotoChange(updatedAlbum);
+    }
+  };  
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -114,4 +193,3 @@ const PhotoAlbum = ({ organizedPhotos, tempDir, onBestPhotoChange }) => {
 };
 
 export default PhotoAlbum;
-
